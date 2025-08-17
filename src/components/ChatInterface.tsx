@@ -133,7 +133,7 @@ export const ChatInterface: React.FC = () => {
     setInputValue('');
 
     switch (currentStep) {
-      case ConversationStep.GREETING:
+      case ConversationStep.NAME:
         setCustomerDetails(prev => ({ ...prev, name: input }));
         addBotMessage(`Great ${input}! Could you share your email so I can send your confirmation?`);
         setCurrentStep(ConversationStep.EMAIL);
