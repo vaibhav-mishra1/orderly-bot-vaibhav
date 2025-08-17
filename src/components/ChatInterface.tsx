@@ -85,7 +85,7 @@ export const ChatInterface: React.FC = () => {
     }, delay);
   };
 
-  const validateOrder = async (orderText: string): Promise<{ valid: boolean; message?: string; orderDetails?: OrderDetails }> => {
+  const validateOrder = async (orderText: string): Promise<{ valid: boolean; message?: string; orderDetails?: OrderDetails; orderId?: string }> => {
     try {
       const response = await fetch('https://arcadebunny.app.n8n.cloud/webhook-test/b9d3b678-595a-4d83-9e6e-57d935a20d4d', {
         method: 'POST',
@@ -104,7 +104,48 @@ export const ChatInterface: React.FC = () => {
       }
 
       const data = await response.json();
-      return data;
+      
+      // Handle array response format
+      if (Array.isArray(data) && data.length > 0) {
+        const orderResponse = data[0];
+        
+        if (orderResponse.status === 'valid') {
+          // Parse items from the webhook response
+          const items = orderResponse.items.split(' = ')[0]; // "Coffee & Walnut Cake x 2"
+          const [itemName, quantityPart] = items.split(' x ');
+          const quantity = parseInt(quantityPart);
+          const menuItem = MENU_ITEMS.find(item => item.name === itemName.trim());
+          
+          if (menuItem) {
+            const orderDetails: OrderDetails = {
+              items: [{
+                name: menuItem.name,
+                quantity: quantity,
+                price: menuItem.price,
+                subtotal: orderResponse.totalPrice
+              }],
+              total: orderResponse.totalPrice,
+              valid: true
+            };
+            
+            return {
+              valid: true,
+              orderDetails,
+              orderId: orderResponse.order_id
+            };
+          }
+        }
+        
+        return {
+          valid: false,
+          message: orderResponse.customerMessage || 'Sorry, I couldn\'t understand your order.'
+        };
+      }
+      
+      return {
+        valid: false,
+        message: 'Sorry, there was an error processing your order. Please try again.',
+      };
     } catch (error) {
       console.error('Error validating order:', error);
       return {
@@ -120,12 +161,20 @@ export const ChatInterface: React.FC = () => {
     ).join('\n\n');
   };
 
-  const formatOrderConfirmation = (orderDetails: OrderDetails) => {
+  const formatOrderConfirmation = (orderDetails: OrderDetails, orderId?: string) => {
     const itemsList = orderDetails.items.map(item => 
-      `${item.quantity} × ${item.name} @ ₹${item.price} each → ₹${item.subtotal}`
-    ).join('\n\n');
+      `${item.quantity} × ${item.name}`
+    ).join('\n');
     
-    return `Perfect 🎉 Your order is:\n\n${itemsList}\n\nTotal: ₹${orderDetails.total}`;
+    let confirmation = `Perfect 🎉 Your order is:\n${itemsList}\nTotal: ₹${orderDetails.total}`;
+    
+    if (orderId) {
+      confirmation += `\nOrder ID: ${orderId}`;
+    }
+    
+    confirmation += '\nThank you for choosing us!';
+    
+    return confirmation;
   };
 
   const handleUserInput = async (input: string) => {
@@ -162,7 +211,7 @@ export const ChatInterface: React.FC = () => {
         
         if (validation.valid && validation.orderDetails) {
           setOrderDetails(validation.orderDetails);
-          addMessage(formatOrderConfirmation(validation.orderDetails), 'bot');
+          addMessage(formatOrderConfirmation(validation.orderDetails, validation.orderId), 'bot');
           addBotMessage('Would you like to confirm this order? (Reply "yes" to confirm)', 500);
           setCurrentStep(ConversationStep.CONFIRMATION);
         } else {
