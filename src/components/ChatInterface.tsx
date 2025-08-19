@@ -241,7 +241,8 @@ export const ChatInterface: React.FC = () => {
           addBotMessage('Your order is ready. Please confirm by saying Yes or No.', 500);
           setCurrentStep(ConversationStep.CONFIRMATION);
         } else {
-          const errorMessage = validation.message || 'Sorry, I couldn\'t understand your order. Please try again with items from our menu.';
+          // Always use the webhook's message field for invalid orders
+          const errorMessage = validation.message || 'Sorry, I couldn\'t understand your order.';
           addMessage(errorMessage, 'bot');
           addBotMessage(`Here are our available items:\n\n${formatMenuDisplay()}\n\nPlease try ordering again.`, 500);
         }
