@@ -139,7 +139,7 @@ export const ChatInterface: React.FC = () => {
         
         return {
           valid: false,
-          message: orderResponse.customerMessage || 'Sorry, I couldn\'t understand your order.'
+          message: orderResponse.message || 'Sorry, I couldn\'t understand your order.'
         };
       }
       
