@@ -2,7 +2,9 @@
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/d0b33bf1-0eea-4eee-9453-eb5198adaa31
+**URL**: https://orderly-bot-vaibhav.lovable.app/
+<br>
+https://lovable.dev/projects/d0b33bf1-0eea-4eee-9453-eb5198adaa31
 
 ## How can I edit this code?
 
