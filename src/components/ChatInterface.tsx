@@ -64,6 +64,7 @@ export const ChatInterface: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<ConversationStep>(ConversationStep.GREETING);
   const [customerDetails, setCustomerDetails] = useState<Partial<CustomerDetails>>({});
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -87,7 +88,7 @@ export const ChatInterface: React.FC = () => {
 
   const validateOrder = async (orderText: string): Promise<{ valid: boolean; message?: string; orderDetails?: OrderDetails; orderId?: string }> => {
     try {
-      const response = await fetch('https://arcadebunny.app.n8n.cloud/webhook-test/b9d3b678-595a-4d83-9e6e-57d935a20d4d', {
+      const response = await fetch('https://arcadebunny.app.n8n.cloud/webhook/b9d3b678-595a-4d83-9e6e-57d935a20d4d', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -155,6 +156,30 @@ export const ChatInterface: React.FC = () => {
     }
   };
 
+  const confirmOrder = async (orderId: string, confirm: 'yes' | 'no') => {
+    try {
+      const response = await fetch('https://arcadebunny.app.n8n.cloud/webhook/b9d3b678-595a-4d83-9e6e-57d935a20d4d', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          order_id: orderId,
+          confirm: confirm
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error confirming order:', error);
+      return null;
+    }
+  };
+
   const formatMenuDisplay = () => {
     return MENU_ITEMS.map(item => 
       `${item.emoji} ${item.name} — ₹${item.price}`
@@ -211,8 +236,9 @@ export const ChatInterface: React.FC = () => {
         
         if (validation.valid && validation.orderDetails) {
           setOrderDetails(validation.orderDetails);
+          setCurrentOrderId(validation.orderId || null);
           addMessage(formatOrderConfirmation(validation.orderDetails, validation.orderId), 'bot');
-          addBotMessage('Would you like to confirm this order? (Reply "yes" to confirm)', 500);
+          addBotMessage('Your order is ready. Please confirm by saying Yes or No.', 500);
           setCurrentStep(ConversationStep.CONFIRMATION);
         } else {
           const errorMessage = validation.message || 'Sorry, I couldn\'t understand your order. Please try again with items from our menu.';
@@ -223,15 +249,28 @@ export const ChatInterface: React.FC = () => {
 
       case ConversationStep.CONFIRMATION:
         if (input.toLowerCase().includes('yes') || input.toLowerCase().includes('confirm')) {
-          addBotMessage(`Wonderful! 🎉 Your order has been confirmed. You'll receive an email at ${customerDetails.email} shortly with the details. Thank you for choosing us! 🙌`);
-          setCurrentStep(ConversationStep.COMPLETE);
-          toast({
-            title: "Order Confirmed! 🎉",
-            description: "Your order has been successfully placed.",
-          });
-        } else {
+          if (currentOrderId) {
+            setIsTyping(true);
+            const confirmationResult = await confirmOrder(currentOrderId, 'yes');
+            setIsTyping(false);
+            
+            addBotMessage(`Wonderful! 🎉 Your order has been confirmed. You'll receive an email at ${customerDetails.email} shortly with the details. Thank you for choosing us! 🙌`);
+            setCurrentStep(ConversationStep.COMPLETE);
+            toast({
+              title: "Order Confirmed! 🎉",
+              description: "Your order has been successfully placed.",
+            });
+          }
+        } else if (input.toLowerCase().includes('no')) {
+          if (currentOrderId) {
+            setIsTyping(true);
+            const confirmationResult = await confirmOrder(currentOrderId, 'no');
+            setIsTyping(false);
+          }
           addBotMessage('No problem! What would you like to order instead?');
           setCurrentStep(ConversationStep.ORDER);
+        } else {
+          addBotMessage('Please reply with "Yes" to confirm or "No" to cancel your order.');
         }
         break;
 
