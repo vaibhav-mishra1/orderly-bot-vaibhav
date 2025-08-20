@@ -66,6 +66,7 @@ export const ChatInterface: React.FC = () => {
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const addMessage = (text: string, sender: 'user' | 'bot') => {
@@ -295,100 +296,109 @@ export const ChatInterface: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-    }
+    // Smooth auto-scroll like WhatsApp
+    messagesEndRef.current?.scrollIntoView({ 
+      behavior: 'smooth',
+      block: 'end'
+    });
   }, [messages, isTyping]);
 
   return (
-    <div className="flex flex-col h-full max-w-4xl mx-auto p-4">
+    <div className="flex flex-col h-full max-w-4xl mx-auto">
       {/* Chat messages area */}
-      <div className="flex-1 mb-6">
-        <ScrollArea className="h-[calc(100vh-300px)] p-6 space-y-6" ref={scrollAreaRef}>
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} fade-in`}
-            >
-              <Card
-                className={`chat-bubble max-w-[85%] p-5 ${
-                  message.sender === 'user'
-                    ? 'chat-bubble-user'
-                    : 'chat-bubble-bot'
-                }`}
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea className="h-[calc(100vh-280px)] p-6" ref={scrollAreaRef}>
+          <div className="space-y-6">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} fade-in`}
               >
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 p-2 rounded-full bg-white/10">
-                    {message.sender === 'user' ? (
-                      <User className="w-5 h-5" />
-                    ) : (
+                <Card
+                  className={`chat-bubble max-w-[85%] p-5 ${
+                    message.sender === 'user'
+                      ? 'chat-bubble-user'
+                      : 'chat-bubble-bot'
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 p-2 rounded-full bg-white/10">
+                      {message.sender === 'user' ? (
+                        <User className="w-5 h-5" />
+                      ) : (
+                        <Bot className="w-5 h-5 text-primary" />
+                      )}
+                    </div>
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed font-medium">
+                      {message.text}
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            ))}
+            
+            {isTyping && (
+              <div className="flex justify-start fade-in">
+                <Card className="chat-bubble chat-bubble-bot p-5 max-w-[85%] pulse-glow">
+                  <div className="flex items-center gap-4">
+                    <div className="flex-shrink-0 p-2 rounded-full bg-primary/10">
                       <Bot className="w-5 h-5 text-primary" />
-                    )}
+                    </div>
+                    <div className="typing-indicator text-sm font-medium">
+                      Orderly is preparing your response... 🍴
+                    </div>
                   </div>
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed font-medium">
-                    {message.text}
-                  </div>
-                </div>
-              </Card>
-            </div>
-          ))}
-          
-          {isTyping && (
-            <div className="flex justify-start fade-in">
-              <Card className="chat-bubble chat-bubble-bot p-5 max-w-[85%] pulse-glow">
-                <div className="flex items-center gap-4">
-                  <div className="flex-shrink-0 p-2 rounded-full bg-primary/10">
-                    <Bot className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="typing-indicator text-sm font-medium">
-                    Orderly is preparing your response... 🍴
-                  </div>
-                </div>
-              </Card>
-            </div>
-          )}
+                </Card>
+              </div>
+            )}
+            
+            {/* Invisible element to scroll to */}
+            <div ref={messagesEndRef} />
+          </div>
         </ScrollArea>
       </div>
 
-      {/* Floating chat input */}
-      <div className="chat-input-container p-6 m-4 sticky bottom-4">
-        <form onSubmit={handleSubmit}>
-          <div className="flex gap-3 items-center">
-            <div className="flex-1 relative">
-              <Input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Tell me what you'd like to order... 🍽️"
-                className="text-base py-4 pl-6 pr-16 border-2 border-primary/20 focus:border-primary rounded-2xl bg-white/95 backdrop-blur-sm"
-                disabled={isTyping || currentStep === ConversationStep.COMPLETE}
-              />
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-2xl">
-                🍴
+      {/* Fixed chat input at bottom */}
+      <div className="border-t bg-background/95 backdrop-blur-sm p-4">
+        <div className="chat-input-container">
+          <form onSubmit={handleSubmit}>
+            <div className="flex gap-3 items-center">
+              <div className="flex-1 relative">
+                <Input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="Tell me what you'd like to order... 🍽️"
+                  className="text-base py-4 pl-6 pr-16 border-2 border-primary/20 focus:border-primary rounded-2xl bg-white/95 backdrop-blur-sm"
+                  disabled={isTyping || currentStep === ConversationStep.COMPLETE}
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-2xl">
+                  🍴
+                </div>
               </div>
+              <Button 
+                type="submit" 
+                size="lg"
+                className="rounded-2xl px-6 py-4 bg-gradient-to-r from-primary to-primary-glow hover:shadow-lg transition-all duration-300 disabled:opacity-50"
+                disabled={!inputValue.trim() || isTyping || currentStep === ConversationStep.COMPLETE}
+              >
+                <Send className="w-5 h-5 mr-2" />
+                Send
+              </Button>
             </div>
-            <Button 
-              type="submit" 
-              size="lg"
-              className="rounded-2xl px-6 py-4 bg-gradient-to-r from-primary to-primary-glow hover:shadow-lg transition-all duration-300 disabled:opacity-50"
-              disabled={!inputValue.trim() || isTyping || currentStep === ConversationStep.COMPLETE}
-            >
-              <Send className="w-5 h-5 mr-2" />
-              Send
-            </Button>
+          </form>
+          
+          {/* Status indicator */}
+          <div className="mt-3 text-center">
+            <span className="text-xs text-muted-foreground bg-white/80 px-3 py-1 rounded-full">
+              {currentStep === ConversationStep.COMPLETE ? (
+                <>🎉 Order Complete! Thank you!</>
+              ) : isTyping ? (
+                <>🤖 Orderly is thinking...</>
+              ) : (
+                <>💬 Ready to take your order</>
+              )}
+            </span>
           </div>
-        </form>
-        
-        {/* Status indicator */}
-        <div className="mt-3 text-center">
-          <span className="text-xs text-muted-foreground bg-white/80 px-3 py-1 rounded-full">
-            {currentStep === ConversationStep.COMPLETE ? (
-              <>🎉 Order Complete! Thank you!</>
-            ) : isTyping ? (
-              <>🤖 Orderly is thinking...</>
-            ) : (
-              <>💬 Ready to take your order</>
-            )}
-          </span>
         </div>
       </div>
     </div>
